@@ -100,7 +100,7 @@ h2{font-size:23px}
 
 label{display:block;font-size:14px;font-weight:bold;margin:16px 0 7px}
 input{width:100%;padding:13px;border:1px solid #cbd1da;border-radius:5px;font-size:15px}
-.payment{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.payment{display:grid;grid-template-columns:1fr}
 .payment label{border:1px solid #ddd;padding:13px;border-radius:5px;display:flex;align-items:center;gap:9px}
 .payment input{width:auto}
 
@@ -133,7 +133,6 @@ nav a{font-size:13px;margin:5px}
 .toolbar{gap:8px}
 .toolbar button{padding:11px 10px;font-size:12px}
 .price-card{min-width:145px}
-.payment{grid-template-columns:1fr}
 .buy-btn{padding:15px 28px}
 }
 </style>
@@ -298,7 +297,7 @@ TALANTA
 <section class="panel" id="booking">
 <div class="panel-inner">
 <h2>Complete your booking</h2>
-<p class="muted">Enter your details to continue to secure payment.</p>
+<p class="muted">Enter your details to continue to secure M-Pesa payment.</p>
 
 <form id="bookingForm">
 <label for="name">Full Name</label>
@@ -318,8 +317,10 @@ TALANTA
 
 <label>Payment method</label>
 <div class="payment">
-<label><input type="radio" name="method" value="mobile_money" checked> M-Pesa (PayHero)</label>
-<label><input type="radio" name="method" value="card"> Bank Card (Paystack)</label>
+<label>
+<input type="radio" name="method" value="mobile_money" checked>
+M-Pesa (PayHero)
+</label>
 </div>
 
 <div class="summary-row total">
@@ -551,11 +552,9 @@ function update(){
  $("categoryInput").value=category+" - "+money(price);
  $("selectedSeatsInput").value=selectedSeats.slice().sort((a,b)=>a-b).join(", ");
 
- const method=document.querySelector('input[name="method"]:checked');
- $("payButton").textContent=method&&method.value==="card"?"PAY WITH PAYSTACK":"PAY WITH M-PESA";
+ $("payButton").textContent="PAY WITH M-PESA";
 }
 
-/* Keep the displayed total and booking quantity in sync. */
 function zoomMap(n){
  zoom=Math.max(.8,Math.min(1.4,zoom+n*.1));
  drawMap();
@@ -652,12 +651,11 @@ $("bookingForm").addEventListener("submit",async e=>{
  const name=$("name").value.trim();
  const phone=$("phone").value.trim();
  const email=$("email").value.trim();
- const method=document.querySelector('input[name="method"]:checked').value;
  const message=$("message");
  const button=$("payButton");
 
  button.disabled=true;
- button.textContent=method==="card"?"CONNECTING TO PAYSTACK...":"CONNECTING TO PAYHERO...";
+ button.textContent="CONNECTING TO PAYHERO...";
  message.className="pending-message";
  message.textContent="Preparing your seat reservation...";
 
@@ -670,7 +668,7 @@ $("bookingForm").addEventListener("submit",async e=>{
     phone,
     email,
     quantity,
-    payment_method:method,
+    payment_method:"mobile_money",
     ticket_type:category,
     stadium_level:level,
     section,
@@ -684,20 +682,6 @@ $("bookingForm").addEventListener("submit",async e=>{
    throw new Error(result.message||"Payment initialization failed.");
   }
 
-  /* PAYSTACK CARD PAYMENT */
-  if(method==="card"){
-   const paymentUrl=result.authorization_url||result.checkout_url||result.payment_url;
-
-   if(!paymentUrl){
-    throw new Error("Paystack did not return a payment link. Please contact support.");
-   }
-
-   message.textContent="Opening secure Paystack card payment...";
-   window.location.href=paymentUrl;
-   return;
-  }
-
-  /* PAYHERO M-PESA PAYMENT */
   if(result.provider!=="payhero"){
    throw new Error("The server did not confirm PayHero as the M-Pesa payment provider. Please contact support.");
   }
@@ -721,12 +705,8 @@ $("bookingForm").addEventListener("submit",async e=>{
   message.textContent=err.message+" If you have already received an M-Pesa prompt or paid, check your M-Pesa messages before retrying.";
   message.className="error-message";
   button.disabled=false;
-  button.textContent=method==="card"?"PAY WITH PAYSTACK":"PAY WITH M-PESA";
+  button.textContent="PAY WITH M-PESA";
  }
-});
-
-document.querySelectorAll('input[name="method"]').forEach(radio=>{
- radio.addEventListener("change",update);
 });
 
 drawMap();
