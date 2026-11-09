@@ -71,9 +71,37 @@ h2{font-size:23px}
 .ticket-control button{width:48px;height:43px;background:white;border:1px solid #cbd5e1;border-radius:7px;font-size:23px;cursor:pointer}
 .ticket-control strong{font-size:24px}
 
-.price-list{display:flex;gap:14px;overflow-x:auto;padding:4px 0 15px}
-.price-card{min-width:165px;border:1px solid #cbd5e1;border-radius:8px;padding:14px;background:white;text-align:left;cursor:pointer}
-.price-card strong{display:block;margin-top:7px;font-size:19px}
+/* TICKET CATEGORIES - 2 BY 2 SQUARE GRID */
+.price-list{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:14px;
+padding:4px 0 15px;
+overflow:visible;
+}
+
+.price-card{
+width:100%;
+min-width:0;
+min-height:155px;
+border:1px solid #cbd5e1;
+border-radius:10px;
+padding:16px 10px;
+background:white;
+text-align:center;
+cursor:pointer;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+gap:9px;
+}
+
+.price-card strong{
+display:block;
+font-size:19px;
+}
+
 .price-card small{color:#64748b}
 .price-card.active{border:2px solid #078343;background:#eaf8ef}
 .price-card.premium{border-color:#c99b32;background:#fffaf0}
@@ -132,7 +160,6 @@ nav a{font-size:13px;margin:5px}
 .section-grid{grid-template-columns:repeat(3,1fr)}
 .toolbar{gap:8px}
 .toolbar button{padding:11px 10px;font-size:12px}
-.price-card{min-width:145px}
 .buy-btn{padding:15px 28px}
 }
 </style>
@@ -236,6 +263,7 @@ TALANTA
 </div>
 
 <div class="price-list">
+
 <button type="button" class="price-card active" onclick="chooseCategory('Regular',2500,this)">
 <small>REGULAR</small>
 <strong>KSh 2,500</strong>
@@ -259,6 +287,7 @@ TALANTA
 <strong>KSh 75,000</strong>
 <small class="premium-note">LIMITED TO 100 TICKETS</small>
 </button>
+
 </div>
 <p class="muted premium-note">VVIP PREMIUM: KSh 75,000 per ticket. Only 100 tickets allocated.</p>
 </div>
