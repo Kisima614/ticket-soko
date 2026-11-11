@@ -58,20 +58,34 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const Timestamp = admin.firestore.Timestamp;
 
-// CORS
-const ALLOWED_ORIGINS = [
+// UPDATED CORS CONFIGURATION
+const ALLOWED_ORIGINS = new Set([
   "https://talantacity.com",
   "https://www.talantacity.com",
   "https://talantasportcitytickets.com",
   "https://www.talantasportcitytickets.com",
+  "http://talantasportcitytickets.com",
+  "http://www.talantasportcitytickets.com",
   "https://kisima614.github.io",
   "http://localhost:3000"
-];
+]);
 
 app.use(cors({
-  origin: ALLOWED_ORIGINS,
+  origin: (origin, callback) => {
+    if (!origin || ALLOWED_ORIGINS.has(origin)) {
+      return callback(null, true);
+    }
+
+    console.log("CORS blocked origin:", origin);
+    return callback(new Error("Origin not allowed by CORS"));
+  },
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "x-ticket-scanner-key"]
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "x-ticket-scanner-key"
+  ],
+  optionsSuccessStatus: 204
 }));
 
 app.use(express.json({
@@ -319,10 +333,13 @@ async function createTicketPDF(ticket) {
     font: boldFont, color: rgb(1, 1, 1)
   });
 
-  page.drawText(`LEVEL ${ticket.level}  |  SECTION ${ticket.section}  |  SEAT ${ticket.seatNumber}`, {
-    x: 25, y: 54, size: 10,
-    font: boldFont, color: rgb(1, 1, 1)
-  });
+  page.drawText(
+    `LEVEL ${ticket.level}  |  SECTION ${ticket.section}  |  SEAT ${ticket.seatNumber}`,
+    {
+      x: 25, y: 54, size: 10,
+      font: boldFont, color: rgb(1, 1, 1)
+    }
+  );
 
   page.drawText(`KSh ${money(ticket.amount)}`, {
     x: 25, y: 30, size: 11,
@@ -408,10 +425,8 @@ async function sendBookingNotifications(reference) {
   const booking = snap.data();
 
   if (booking.status !== "paid") return;
-
   if (booking.emailNotificationStatus === "sent") return;
 
-  // Claim the notification to avoid repeated sends from concurrent callbacks.
   const claim = await db.runTransaction(async tx => {
     const currentSnap = await tx.get(bookingRef);
 
@@ -744,8 +759,6 @@ async function createReservation(details) {
 async function finalizeBooking(reference, paymentReference) {
   const bookingRef = db.collection("bookings").doc(reference);
 
-  // Generate IDs and tokens outside the transaction so transaction retries
-  // use the same ticket data.
   const initialSnap = await bookingRef.get();
 
   if (!initialSnap.exists) {
@@ -891,7 +904,6 @@ async function confirmCardPayment(reference) {
 
   const confirmed = await finalizeBooking(reference, reference);
 
-  // Email errors do not reverse a successful payment.
   await sendBookingNotifications(reference);
 
   return confirmed;
@@ -1552,7 +1564,6 @@ app.post("/api/payments/payhero-callback", async (req, res) => {
       payheroLastCallbackStatus: "Success"
     });
 
-    // Retry email if an earlier attempt failed.
     await sendBookingNotifications(reference);
 
     console.log("PayHero payment confirmed:", reference);
@@ -1759,7 +1770,6 @@ app.post("/api/admin/retry-ticket-email/:reference", async (req, res) => {
       });
     }
 
-    // Only allow retry when the previous send did not complete.
     if (snap.data().emailNotificationStatus === "sent") {
       return res.json({
         status: true,
