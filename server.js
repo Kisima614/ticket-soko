@@ -16,7 +16,9 @@ const EVENT_DATE = "5 January 2027";
 const EVENT_TIME = "4:00 PM EAT";
 const EVENT_VENUE = "Raila Odinga International Stadium, Nairobi";
 
-const FRONTEND_URL = "https://www.talantasportcitytickets.com/";
+// CORRECT PRIMARY WEBSITE
+const FRONTEND_URL = "https://www.talantasportscitytickets.com/";
+
 const PAYSTACK_URL = "https://api.paystack.co";
 const PAYHERO_URL = "https://backend.payhero.co.ke";
 const RESEND_URL = "https://api.resend.com/emails";
@@ -39,6 +41,7 @@ const LEVEL_SECTIONS = {
 };
 
 // FIREBASE INITIALIZATION
+
 const SERVICE_ACCOUNT_PATH =
   process.env.GOOGLE_APPLICATION_CREDENTIALS ||
   "/etc/secrets/serviceAccountKey.json";
@@ -58,14 +61,19 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const Timestamp = admin.firestore.Timestamp;
 
-// UPDATED CORS CONFIGURATION
+// CORRECTED CORS CONFIGURATION
+
 const ALLOWED_ORIGINS = new Set([
+  "https://talantasportscitytickets.com",
+  "https://www.talantasportscitytickets.com",
+  "http://talantasportscitytickets.com",
+  "http://www.talantasportscitytickets.com",
+
+  // Secondary website
   "https://talantacity.com",
   "https://www.talantacity.com",
-  "https://talantasportcitytickets.com",
-  "https://www.talantasportcitytickets.com",
-  "http://talantasportcitytickets.com",
-  "http://www.talantasportcitytickets.com",
+
+  // Development
   "https://kisima614.github.io",
   "http://localhost:3000"
 ]);
@@ -79,12 +87,15 @@ app.use(cors({
     console.log("CORS blocked origin:", origin);
     return callback(new Error("Origin not allowed by CORS"));
   },
+
   methods: ["GET", "POST", "OPTIONS"],
+
   allowedHeaders: [
     "Content-Type",
     "Authorization",
     "x-ticket-scanner-key"
   ],
+
   optionsSuccessStatus: 204
 }));
 
@@ -96,6 +107,7 @@ app.use(express.json({
 }));
 
 // AUTHENTICATION HELPERS
+
 function paymentHeaders() {
   if (!process.env.PAYSTACK_SECRET_KEY) {
     throw new Error("Paystack secret key is missing.");
@@ -130,6 +142,7 @@ function payheroHeaders() {
 }
 
 // GENERAL HELPERS
+
 function escapeHTML(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;",
@@ -181,6 +194,7 @@ function seatDocument(seatId) {
 
 function ticketColor(ticketType) {
   const values = TICKET_TYPES[ticketType]?.color || [0.05, 0.12, 0.25];
+
   return rgb(values[0], values[1], values[2]);
 }
 
@@ -189,7 +203,9 @@ function sha256(value) {
 }
 
 function safeCompare(a, b) {
-  if (typeof a !== "string" || typeof b !== "string") return false;
+  if (typeof a !== "string" || typeof b !== "string") {
+    return false;
+  }
 
   const first = Buffer.from(a);
   const second = Buffer.from(b);
@@ -197,6 +213,8 @@ function safeCompare(a, b) {
   return first.length === second.length &&
     crypto.timingSafeEqual(first, second);
 }
+
+// VALIDATE STADIUM SEATS
 
 function validateSeats(level, section, seats, quantity) {
   const levelInfo = LEVEL_SECTIONS[level];
@@ -233,6 +251,7 @@ function validateSeats(level, section, seats, quantity) {
 }
 
 // CREATE INDIVIDUAL TICKET RECORDS
+
 function prepareTicketRecords(booking) {
   return booking.seats.map(seat => {
     const id = crypto.randomUUID();
@@ -264,6 +283,7 @@ function prepareTicketRecords(booking) {
 }
 
 // PDF TICKET GENERATION
+
 async function createTicketPDF(ticket) {
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([600, 300]);
@@ -274,86 +294,134 @@ async function createTicketPDF(ticket) {
   const mainColor = ticketColor(ticket.ticketType);
 
   page.drawRectangle({
-    x: 0, y: 0, width: 600, height: 300,
+    x: 0,
+    y: 0,
+    width: 600,
+    height: 300,
     color: rgb(0.035, 0.055, 0.10)
   });
 
   page.drawRectangle({
-    x: 0, y: 240, width: 600, height: 60,
+    x: 0,
+    y: 240,
+    width: 600,
+    height: 60,
     color: mainColor
   });
 
   page.drawRectangle({
-    x: 445, y: 0, width: 155, height: 240,
+    x: 445,
+    y: 0,
+    width: 155,
+    height: 240,
     color: rgb(0.08, 0.11, 0.17)
   });
 
   page.drawText("TALANTA SPORT CITY", {
-    x: 25, y: 265, size: 20,
-    font: boldFont, color: rgb(1, 1, 1)
+    x: 25,
+    y: 265,
+    size: 20,
+    font: boldFont,
+    color: rgb(1, 1, 1)
   });
 
   page.drawText("OFFICIAL EVENT TICKET", {
-    x: 25, y: 248, size: 9,
-    font: regularFont, color: rgb(1, 1, 1)
+    x: 25,
+    y: 248,
+    size: 9,
+    font: regularFont,
+    color: rgb(1, 1, 1)
   });
 
   page.drawText(ticket.event, {
-    x: 25, y: 213, size: 22,
-    font: boldFont, color: rgb(1, 1, 1)
+    x: 25,
+    y: 213,
+    size: 22,
+    font: boldFont,
+    color: rgb(1, 1, 1)
   });
 
   page.drawText(`${ticket.eventDate}  |  ${ticket.eventTime}`, {
-    x: 25, y: 188, size: 11,
-    font: regularFont, color: rgb(0.85, 0.88, 0.93)
+    x: 25,
+    y: 188,
+    size: 11,
+    font: regularFont,
+    color: rgb(0.85, 0.88, 0.93)
   });
 
   page.drawText(ticket.venue, {
-    x: 25, y: 170, size: 9,
-    font: regularFont, color: rgb(0.85, 0.88, 0.93)
+    x: 25,
+    y: 170,
+    size: 9,
+    font: regularFont,
+    color: rgb(0.85, 0.88, 0.93)
   });
 
   page.drawText("TICKET HOLDER", {
-    x: 25, y: 140, size: 8,
-    font: boldFont, color: rgb(0.65, 0.72, 0.82)
+    x: 25,
+    y: 140,
+    size: 8,
+    font: boldFont,
+    color: rgb(0.65, 0.72, 0.82)
   });
 
   page.drawText(String(ticket.customerName).slice(0, 45), {
-    x: 25, y: 124, size: 13,
-    font: boldFont, color: rgb(1, 1, 1)
+    x: 25,
+    y: 124,
+    size: 13,
+    font: boldFont,
+    color: rgb(1, 1, 1)
   });
 
   page.drawText("CATEGORY", {
-    x: 25, y: 96, size: 8,
-    font: boldFont, color: rgb(0.65, 0.72, 0.82)
+    x: 25,
+    y: 96,
+    size: 8,
+    font: boldFont,
+    color: rgb(0.65, 0.72, 0.82)
   });
 
   page.drawText(ticket.ticketType, {
-    x: 25, y: 80, size: 13,
-    font: boldFont, color: rgb(1, 1, 1)
+    x: 25,
+    y: 80,
+    size: 13,
+    font: boldFont,
+    color: rgb(1, 1, 1)
   });
 
   page.drawText(
     `LEVEL ${ticket.level}  |  SECTION ${ticket.section}  |  SEAT ${ticket.seatNumber}`,
     {
-      x: 25, y: 54, size: 10,
-      font: boldFont, color: rgb(1, 1, 1)
+      x: 25,
+      y: 54,
+      size: 10,
+      font: boldFont,
+      color: rgb(1, 1, 1)
     }
   );
 
   page.drawText(`KSh ${money(ticket.amount)}`, {
-    x: 25, y: 30, size: 11,
-    font: boldFont, color: rgb(0.95, 0.82, 0.40)
+    x: 25,
+    y: 30,
+    size: 11,
+    font: boldFont,
+    color: rgb(0.95, 0.82, 0.40)
   });
 
   page.drawText("TICKET STUB", {
-    x: 462, y: 215, size: 10,
-    font: boldFont, color: rgb(1, 1, 1)
+    x: 462,
+    y: 215,
+    size: 10,
+    font: boldFont,
+    color: rgb(1, 1, 1)
   });
 
   page.drawText(ticket.ticketNumber, {
-    x: 462, y: 195, size: 9,
-    font: boldFont, color: rgb(0.95, 0.82, 0.40)
+    x: 462,
+    y: 195,
+    size: 9,
+    font: boldFont,
+    color: rgb(0.95, 0.82, 0.40)
   });
 
   const qrContent = `${ticket.id}.${ticket.token}`;
@@ -368,23 +436,33 @@ async function createTicketPDF(ticket) {
   const qrImage = await pdf.embedPng(qrBuffer);
 
   page.drawImage(qrImage, {
-    x: 465, y: 65, width: 105, height: 105
+    x: 465,
+    y: 65,
+    width: 105,
+    height: 105
   });
 
   page.drawText("SCAN AT ENTRY", {
-    x: 473, y: 48, size: 8,
-    font: boldFont, color: rgb(1, 1, 1)
+    x: 473,
+    y: 48,
+    size: 8,
+    font: boldFont,
+    color: rgb(1, 1, 1)
   });
 
   page.drawText("One ticket per seat", {
-    x: 465, y: 28, size: 7,
-    font: regularFont, color: rgb(0.75, 0.78, 0.84)
+    x: 465,
+    y: 28,
+    size: 7,
+    font: regularFont,
+    color: rgb(0.75, 0.78, 0.84)
   });
 
   return Buffer.from(await pdf.save());
 }
 
 // RESEND EMAIL HELPER
+
 async function sendResendEmail({ to, subject, html, attachments }) {
   if (!process.env.RESEND_API_KEY) {
     throw new Error("RESEND_API_KEY is missing.");
@@ -416,6 +494,7 @@ async function sendResendEmail({ to, subject, html, attachments }) {
 }
 
 // EMAIL CUSTOMER AND ADMIN AFTER PAYMENT
+
 async function sendBookingNotifications(reference) {
   const bookingRef = db.collection("bookings").doc(reference);
   const snap = await bookingRef.get();
@@ -515,6 +594,7 @@ async function sendBookingNotifications(reference) {
           </table>
           <p>Each seat has its own ticket and QR code. Present the corresponding ticket at the stadium entrance.</p>
           <p>Thank you for booking with Talanta Sport City.</p>
+          <p><a href="${FRONTEND_URL}">Visit Talanta Sport City</a></p>
         </div>
       </div>
     `;
@@ -541,7 +621,7 @@ async function sendBookingNotifications(reference) {
         <p><strong>Section:</strong> ${booking.section}</p>
         <p><strong>Amount:</strong> KSh ${money(booking.amount)}</p>
         <p><strong>Seats:</strong> ${booking.seats.map(s => escapeHTML(s.number)).join(", ")}</p>
-        <p><strong>Event:</strong> ${EVENT}</p>
+        <p><strong>Event:</strong> ${escapeHTML(EVENT)}</p>
       </div>
     `;
 
@@ -561,6 +641,7 @@ async function sendBookingNotifications(reference) {
     });
 
     console.log("Ticket emails sent:", reference);
+
   } catch (error) {
     console.error("Ticket email error:", error.response?.data || error.message);
 
@@ -577,6 +658,7 @@ async function sendBookingNotifications(reference) {
 }
 
 // RELEASE ONE EXPIRED BOOKING
+
 async function releaseBooking(reference) {
   const bookingRef = db.collection("bookings").doc(reference);
 
@@ -627,6 +709,7 @@ async function releaseBooking(reference) {
 }
 
 // RELEASE EXPIRED RESERVATIONS
+
 async function releaseExpiredReservations() {
   const now = Timestamp.now();
 
@@ -642,6 +725,7 @@ async function releaseExpiredReservations() {
 }
 
 // CREATE EXACT SEAT RESERVATION
+
 async function createReservation(details) {
   const {
     reference,
@@ -668,6 +752,7 @@ async function createReservation(details) {
     }
 
     const counterSnap = await tx.get(counterRef);
+
     const counter = counterSnap.exists
       ? counterSnap.data()
       : { sold: 0, held: 0 };
@@ -756,6 +841,7 @@ async function createReservation(details) {
 }
 
 // FINALIZE VERIFIED PAYMENT AND CREATE INDIVIDUAL TICKETS
+
 async function finalizeBooking(reference, paymentReference) {
   const bookingRef = db.collection("bookings").doc(reference);
 
@@ -864,6 +950,7 @@ async function finalizeBooking(reference, paymentReference) {
 }
 
 // VERIFY PAYSTACK CARD PAYMENT
+
 async function confirmCardPayment(reference) {
   const bookingSnap = await db.collection("bookings").doc(reference).get();
 
@@ -887,7 +974,10 @@ async function confirmCardPayment(reference) {
 
   const response = await axios.get(
     `${PAYSTACK_URL}/transaction/verify/${encodeURIComponent(reference)}`,
-    { headers: paymentHeaders(), timeout: 20000 }
+    {
+      headers: paymentHeaders(),
+      timeout: 20000
+    }
   );
 
   const payment = response.data.data;
@@ -910,6 +1000,7 @@ async function confirmCardPayment(reference) {
 }
 
 // VERIFY PAYHERO M-PESA PAYMENT
+
 async function confirmMpesaPayment(reference) {
   const bookingRef = db.collection("bookings").doc(reference);
   const bookingSnap = await bookingRef.get();
@@ -965,11 +1056,13 @@ async function confirmMpesaPayment(reference) {
   return confirmed;
 }
 
-// HOME
+// HOME / SERVER HEALTH CHECK
+
 app.get("/", (req, res) => {
   res.json({
     service: "Talanta Sport City",
     status: "running",
+    website: FRONTEND_URL,
     event: EVENT,
     eventDate: EVENT_DATE,
     eventTime: EVENT_TIME,
@@ -986,6 +1079,7 @@ app.get("/", (req, res) => {
 });
 
 // OPTIMIZED SEAT AVAILABILITY
+
 app.get("/api/seats/:level/:section", async (req, res) => {
   const startedAt = Date.now();
 
@@ -1012,6 +1106,7 @@ app.get("/api/seats/:level/:section", async (req, res) => {
       { length: SEATS_PER_SECTION },
       (_, index) => {
         const number = index + 1;
+
         const id =
           `L${level}-S${section}-N${String(number).padStart(2, "0")}`;
 
@@ -1051,7 +1146,13 @@ app.get("/api/seats/:level/:section", async (req, res) => {
       `Seat loading: L${level} S${section} | ${Date.now() - startedAt}ms`
     );
 
-    return res.json({ status: true, level, section, seats });
+    return res.json({
+      status: true,
+      level,
+      section,
+      seats
+    });
+
   } catch (error) {
     console.error("Seat availability error:", error);
 
@@ -1063,6 +1164,7 @@ app.get("/api/seats/:level/:section", async (req, res) => {
 });
 
 // TICKET AVAILABILITY
+
 app.get("/api/tickets/availability", async (req, res) => {
   try {
     await releaseExpiredReservations();
@@ -1077,7 +1179,10 @@ app.get("/api/tickets/availability", async (req, res) => {
 
     Object.entries(TICKET_TYPES).forEach(([name, type], index) => {
       const snap = snapshots[index];
-      const data = snap.exists ? snap.data() : { sold: 0, held: 0 };
+
+      const data = snap.exists
+        ? snap.data()
+        : { sold: 0, held: 0 };
 
       result[name] = {
         capacity: type.capacity,
@@ -1091,7 +1196,11 @@ app.get("/api/tickets/availability", async (req, res) => {
       };
     });
 
-    res.json({ status: true, availability: result });
+    res.json({
+      status: true,
+      availability: result
+    });
+
   } catch (error) {
     console.error("Availability error:", error.message);
 
@@ -1103,6 +1212,7 @@ app.get("/api/tickets/availability", async (req, res) => {
 });
 
 // INITIALIZE PAYMENT
+
 app.post("/api/payments/initialize", async (req, res) => {
   let reference;
   let reservationCreated = false;
@@ -1162,7 +1272,12 @@ app.post("/api/payments/initialize", async (req, res) => {
     );
 
     const isCard = ["card", "bank_card"].includes(method);
-    const isMobile = ["mobile_money", "mpesa", "m-pesa"].includes(method);
+
+    const isMobile = [
+      "mobile_money",
+      "mpesa",
+      "m-pesa"
+    ].includes(method);
 
     if (!isCard && !isMobile) {
       throw new Error("Choose M-Pesa or bank card.");
@@ -1176,7 +1291,9 @@ app.post("/api/payments/initialize", async (req, res) => {
       throw new Error("PayHero channel ID is missing.");
     }
 
-    if (isMobile) payheroHeaders();
+    if (isMobile) {
+      payheroHeaders();
+    }
 
     await releaseExpiredReservations();
 
@@ -1200,6 +1317,7 @@ app.post("/api/payments/initialize", async (req, res) => {
     const amount = type.price * quantity;
 
     // PAYSTACK CARD PAYMENT
+
     if (isCard) {
       const callback =
         process.env.CALLBACK_URL ||
@@ -1259,6 +1377,7 @@ app.post("/api/payments/initialize", async (req, res) => {
     }
 
     // PAYHERO M-PESA STK PUSH
+
     const channelId = Number(process.env.PAYHERO_CHANNEL_ID);
 
     if (!Number.isInteger(channelId) || channelId <= 0) {
@@ -1313,6 +1432,7 @@ app.post("/api/payments/initialize", async (req, res) => {
       amount,
       currency: "KES"
     });
+
   } catch (error) {
     console.error(
       "Payment initialization error:",
@@ -1323,7 +1443,10 @@ app.post("/api/payments/initialize", async (req, res) => {
       try {
         await releaseBooking(reference);
       } catch (releaseError) {
-        console.error("Reservation release error:", releaseError.message);
+        console.error(
+          "Reservation release error:",
+          releaseError.message
+        );
       }
     }
 
@@ -1340,6 +1463,7 @@ app.post("/api/payments/initialize", async (req, res) => {
 });
 
 // PAYSTACK CARD RETURN / VERIFICATION
+
 app.get("/api/payments/verify", async (req, res) => {
   try {
     const reference = String(req.query.reference || "");
@@ -1411,13 +1535,16 @@ app.get("/api/payments/verify", async (req, res) => {
           <p>Seats:<br>${seats}</p>
           <h2>KSh ${money(booking.amount)}</h2>
           <p>Booking reference:</p>
-          <div class="ref"><strong>${escapeHTML(reference)}</strong></div>
+          <div class="ref">
+            <strong>${escapeHTML(reference)}</strong>
+          </div>
           <p>Your individual PDF tickets have been sent to your email address.</p>
           <a href="${escapeHTML(FRONTEND_URL)}">Return to website</a>
         </div>
       </body>
       </html>
     `);
+
   } catch (error) {
     console.error(
       "Paystack verification error:",
@@ -1434,6 +1561,7 @@ app.get("/api/payments/verify", async (req, res) => {
 });
 
 // CHECK PAYMENT STATUS
+
 app.get("/api/payments/status/:reference", async (req, res) => {
   try {
     const reference = String(req.params.reference || "");
@@ -1465,16 +1593,20 @@ app.get("/api/payments/status/:reference", async (req, res) => {
     ) {
       try {
         await confirmMpesaPayment(reference);
+
         const refreshed = await bookingRef.get();
         booking = refreshed.data();
+
       } catch (error) {
         console.log("PayHero M-Pesa status check:", error.message);
       }
+
     } else if (
       booking.status === "paid" &&
       booking.emailNotificationStatus !== "sent"
     ) {
       await sendBookingNotifications(reference);
+
       const refreshed = await bookingRef.get();
       booking = refreshed.data();
     }
@@ -1490,6 +1622,7 @@ app.get("/api/payments/status/:reference", async (req, res) => {
       paymentMethod: booking.paymentMethod,
       paymentProvider: booking.paymentProvider || null
     });
+
   } catch (error) {
     console.error("Payment status error:", error.message);
 
@@ -1501,6 +1634,7 @@ app.get("/api/payments/status/:reference", async (req, res) => {
 });
 
 // PAYHERO PAYMENT CALLBACK
+
 app.post("/api/payments/payhero-callback", async (req, res) => {
   try {
     const callback = req.body.response || req.body;
@@ -1569,6 +1703,7 @@ app.post("/api/payments/payhero-callback", async (req, res) => {
     console.log("PayHero payment confirmed:", reference);
 
     return res.sendStatus(200);
+
   } catch (error) {
     console.error(
       "PayHero callback error:",
@@ -1580,6 +1715,7 @@ app.post("/api/payments/payhero-callback", async (req, res) => {
 });
 
 // PAYSTACK WEBHOOK
+
 app.post("/api/payments/webhook", async (req, res) => {
   try {
     const secret = process.env.PAYSTACK_SECRET_KEY;
@@ -1629,6 +1765,7 @@ app.post("/api/payments/webhook", async (req, res) => {
     }
 
     return res.sendStatus(200);
+
   } catch (error) {
     console.error(
       "Paystack webhook error:",
@@ -1640,6 +1777,7 @@ app.post("/api/payments/webhook", async (req, res) => {
 });
 
 // SECURE TICKET VERIFICATION / SINGLE-USE ENTRY
+
 app.post("/api/tickets/verify", async (req, res) => {
   try {
     const scannerKey = req.headers["x-ticket-scanner-key"];
@@ -1685,13 +1823,19 @@ app.post("/api/tickets/verify", async (req, res) => {
       const ticketSnap = await tx.get(ticketRef);
 
       if (!ticketSnap.exists) {
-        return { valid: false, message: "Ticket not found." };
+        return {
+          valid: false,
+          message: "Ticket not found."
+        };
       }
 
       const ticket = ticketSnap.data();
 
       if (ticket.tokenHash !== sha256(token)) {
-        return { valid: false, message: "Invalid ticket security code." };
+        return {
+          valid: false,
+          message: "Invalid ticket security code."
+        };
       }
 
       if (ticket.status === "used") {
@@ -1704,7 +1848,10 @@ app.post("/api/tickets/verify", async (req, res) => {
       }
 
       if (ticket.status !== "valid") {
-        return { valid: false, message: "Ticket is not valid." };
+        return {
+          valid: false,
+          message: "Ticket is not valid."
+        };
       }
 
       tx.update(ticketRef, {
@@ -1725,6 +1872,7 @@ app.post("/api/tickets/verify", async (req, res) => {
     });
 
     return res.status(result.valid ? 200 : 409).json(result);
+
   } catch (error) {
     console.error("Ticket verification error:", error.message);
 
@@ -1736,6 +1884,7 @@ app.post("/api/tickets/verify", async (req, res) => {
 });
 
 // MANUAL EMAIL RETRY - PROTECTED
+
 app.post("/api/admin/retry-ticket-email/:reference", async (req, res) => {
   try {
     const suppliedKey = String(req.headers.authorization || "")
@@ -1790,6 +1939,7 @@ app.post("/api/admin/retry-ticket-email/:reference", async (req, res) => {
       emailNotificationStatus:
         refreshed.data().emailNotificationStatus || "unknown"
     });
+
   } catch (error) {
     console.error("Email retry error:", error.message);
 
@@ -1801,6 +1951,11 @@ app.post("/api/admin/retry-ticket-email/:reference", async (req, res) => {
 });
 
 // SERVER START
+
 app.listen(PORT, () => {
   console.log(`Talanta Sport City running on port ${PORT}`);
+  console.log(`Primary website: ${FRONTEND_URL}`);
+  console.log(`Event: ${EVENT}`);
+  console.log(`Event date: ${EVENT_DATE}`);
+  console.log(`Event time: ${EVENT_TIME}`);
 });
